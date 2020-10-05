@@ -1,0 +1,15 @@
+<h1 class="title">
+  Memo App <a class="button is-link" href="/new">追加</a>
+</h1>
+
+<p class="subtitle">
+  memoの一覧
+</p>
+
+<ul>
+<% if @memos %>
+  <% @memos.each do |memo| %>
+    <li><%= memo[:title] %></li>
+  <% end %>
+<% end %>
+</ul>
