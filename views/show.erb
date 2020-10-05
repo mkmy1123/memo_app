@@ -1,0 +1,22 @@
+<div class="mt-30">
+  <h1 class="subtitle mt-30"> << Memo's title >> </p>
+  <div class="box">
+    <%= @memo["title"] %>
+  </div>
+  <h1 class="subtitle mt-30"> << Memo's body >> </p>
+  <div class="box">
+    <% @memo["body"].lines do |line| %>
+      <p><%= line %></p>
+    <% end %>
+  </div>
+</div>
+
+<div class="mt-30">
+  <div class="buttons are-medium">
+    <a class="button is-link">編集</a>
+    <form action="<%= @memo["id"]%>/delete" method="post">
+      <input type="hidden" name="_method" value="DELETE"> 
+      <input type="submit" class="button is-primary" value="削除">
+    </form>
+  </div>
+</div>
