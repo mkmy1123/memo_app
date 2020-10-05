@@ -1,9 +1,13 @@
+# encoding: utf-8
 require 'sinatra'
 require 'sinatra/reloader'
+require 'json'
+
+FILE_PATH = "memo/data.json"
 
 # root page
 get "/" do
-  @memos = all_memo("memo")
+  @memos = all_memo
   erb :root
 end
 
@@ -17,18 +21,17 @@ post "/memo" do
 end
 
 def create(title, body)
-  File.open("memo/#{title}", "w", 0755) { |f| f.print body }
+  File.open(FILE_PATH, "a", 0755) do |file|
+    id = all_memo.last["id"] + 1
+    json =<<~JSON
+    { "id": #{id}, "title": "#{title}", "body": "#{body}" }
+    JSON
+    file.puts json
+  end
 end
 
-def all_memo(folder_name)
-  memos = []
-  Dir.open(folder_name).each do |file|
-    unless file[0] == "."
-      memos << {
-        title: file,
-        body: file
-      }
-    end
+def all_memo
+  File.readlines(FILE_PATH).map do |json|
+    JSON.parse(json)
   end
-  memos
 end
