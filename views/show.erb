@@ -5,9 +5,7 @@
   </div>
   <h1 class="subtitle mt-30"> << Memo's body >> </p>
   <div class="box">
-    <% @memo["body"].lines do |line| %>
-      <p><%= line %></p>
-    <% end %>
+    <%= @memo["body"] %>
   </div>
 </div>
 

@@ -22,6 +22,7 @@ end
 
 get "/memo/:id" do
   get_memo(params[:id])
+  @memo["body"] = get_body(@memo)
   erb :show
 end
 
@@ -43,6 +44,18 @@ def get_memo(id)
       @memo = memo
     end
   end
+end
+
+def get_body(memo)
+  array = []
+  memo["body"].lines do |line|
+    if line == "\r\n"
+      array << "<br>"
+    else
+      array << "<p>#{line}</p>"
+    end
+  end
+  array.join
 end
 
 def create(title, body)
