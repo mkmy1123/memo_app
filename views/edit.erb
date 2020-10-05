@@ -1,0 +1,10 @@
+<div class="field">
+  <div class="control">
+    <form action="edit" method="POST">
+      <input type="hidden" name="_method" value="PATCH">
+      <input class="input" type="text" placeholder="title" name="title" value="<%= @memo["title"] %>">
+      <textarea class="textarea mt-30" type="text" placeholder="" name="body"><%= @memo["body"] %></textarea>
+      <input class="button is-primary mt-30" type="submit" value="更新">
+    </form>
+  </div>
+</div>

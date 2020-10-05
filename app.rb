@@ -22,18 +22,24 @@ end
 
 get "/memo/:id" do
   get_memo(params[:id])
-  @memo["body"] = get_body(@memo)
+  @memo["body"] = get_html_body(@memo)
   erb :show
 end
 
+get "/memo/:id/edit" do
+  get_memo(params[:id])
+  erb :edit
+end
+
+patch "/memo/:id/edit" do
+  memos = all_memo
+  update(memos, params[:id])
+  redirect "/memo/#{params[:id]}"
+end
+
 delete "/memo/:id/delete" do
-  deleted = all_memo.delete_if { |memo| p memo["id"] == params[:id].to_i }
-  File.open(FILE_PATH, "w", 0755) do |file|
-    deleted.map! do |memo|
-      json = memo.to_json
-      file.puts json
-    end
-  end
+  memos = all_memo
+  delete(memos, params[:id])
   redirect '/'
 end
 
@@ -46,7 +52,7 @@ def get_memo(id)
   end
 end
 
-def get_body(memo)
+def get_html_body(memo)
   array = []
   memo["body"].lines do |line|
     if line == "\r\n"
@@ -65,6 +71,32 @@ def create(title, body)
     { "id": #{id}, "title": "#{title}", "body": #{body.dump} }
     JSON
     file.puts json
+  end
+end
+
+def update(memos, id)
+  File.open(FILE_PATH, "w", 0755) do |file|
+    memos.each do |memo|
+      if memo["id"] == id.to_i
+        json =<<~JSON
+        { "id": #{id}, "title": "#{params[:title]}", "body": #{params[:body].dump} }
+        JSON
+        file.puts json
+      else
+        json = memo.to_json
+        file.puts json
+      end
+    end
+  end
+end
+
+def delete(memos, id)
+  memos = memos.delete_if { |memo| memo["id"] == id.to_i }
+  File.open(FILE_PATH, "w", 0755) do |file|
+    memos.map! do |memo|
+      json = memo.to_json
+      file.puts json
+    end
   end
 end
 

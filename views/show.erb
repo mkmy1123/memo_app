@@ -11,9 +11,9 @@
 
 <div class="mt-30">
   <div class="buttons are-medium">
-    <a class="button is-link">編集</a>
-    <form action="<%= @memo["id"]%>/delete" method="post">
-      <input type="hidden" name="_method" value="DELETE"> 
+    <a href="<%= @memo["id"] %>/edit" class="button is-link">編集</a>
+    <form action="<%= @memo["id"]%>/delete" method="POST">
+      <input type="hidden" name="_method" value="DELETE">
       <input type="submit" class="button is-primary" value="削除">
     </form>
   </div>
