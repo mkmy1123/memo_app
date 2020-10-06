@@ -2,13 +2,12 @@
 
 require 'sinatra'
 require 'sinatra/reloader'
-require 'json'
-
-FILE_PATH = 'memo/data.json'
+require 'pg'
+require 'date'
 
 # root page
 get '/' do
-  @memos = all_memo
+  @memos = get_all_memo
   erb :root
 end
 
@@ -23,7 +22,7 @@ end
 
 get '/memo/:id' do
   get_memo(params[:id])
-  @memo['body'] = get_html_body(@memo)
+  get_html_body(@memo)
   erb :show
 end
 
@@ -33,24 +32,61 @@ get '/memo/:id/edit' do
 end
 
 patch '/memo/:id/edit' do
-  memos = all_memo
-  update(memos, params[:id])
+  get_memo(params[:id])
+  update(params[:id], params[:title], params[:body])
   redirect "/memo/#{params[:id]}"
 end
 
 delete '/memo/:id/delete' do
-  memos = all_memo
-  delete(memos, params[:id])
+  delete(params[:id])
   redirect '/'
 end
 
-def is_equal_id(memo, id)
-  memo['id'] == id.to_i
+# ---- ACTIONS ---- 
+def create(title, body)
+  sql =<<~SQL
+    INSERT INTO memo(id, title, body, updated_at, created_at)
+    VALUES(DEFAULT, $1, $2, now(), now())
+  SQL
+  conn = PG.connect( dbname: 'memo_db', user: 'postgres' )
+  conn.exec(sql, [title, body])
+end
+
+def update(id, title, body)
+  sql =<<~SQL
+    UPDATE memo
+    SET title = $1,
+        body = $2,
+        updated_at = now()
+    WHERE id = #{id}
+  SQL
+  conn = PG.connect( dbname: 'memo_db', user: 'postgres' )
+  conn.exec(sql, [title, body])
+end
+
+def delete(id)
+  conn = PG.connect( dbname: 'memo_db', user: 'postgres' )
+  conn.exec( "DELETE FROM memo WHERE id = #{id}" )
+end
+
+# ---- GET DATA'S METHOD -----
+def get_all_memo
+  conn = PG.connect( dbname: 'memo_db' )
+  memos = []
+  conn.exec( "SELECT * FROM memo" ) do |result|
+    result.each do |row|
+      memos << row
+    end
+  end
+  memos
 end
 
 def get_memo(id)
-  all_memo.each do |memo|
-    @memo = memo if is_equal_id(memo, id)
+  conn = PG.connect( dbname: 'memo_db' )
+  conn.exec( "SELECT * FROM memo WHERE id = #{id}" ) do |result|
+    result.each do |row|
+      @memo = row
+    end
   end
 end
 
@@ -62,44 +98,5 @@ def get_html_body(memo)
       "<p>#{line}</p>"
     end
   end
-  array.join
-end
-
-def to_json_style(id, title, body)
-  <<~JSON
-    { "id": #{id}, "title": "#{title}", "body": #{body} }
-  JSON
-end
-
-def create(title, body)
-  File.open(FILE_PATH, 'a', 0o755) do |file|
-    id = all_memo.none? ? 1 : all_memo.last['id'] + 1
-    json = to_json_style(id, title, body.dump)
-    file.puts json
-  end
-end
-
-def update(memos, id)
-  File.open(FILE_PATH, 'w', 0o755) do |file|
-    memos.each do |memo|
-      json = is_equal_id(memo, id) ? to_json_style(id, params[:title], params[:body].dump) : memo.to_json
-      file.puts json
-    end
-  end
-end
-
-def delete(memos, id)
-  memos = memos.delete_if { |memo| is_equal_id(memo, id) }
-  File.open(FILE_PATH, 'w', 0o755) do |file|
-    memos.map! do |memo|
-      json = memo.to_json
-      file.puts json
-    end
-  end
-end
-
-def all_memo
-  File.readlines(FILE_PATH).map do |json|
-    JSON.parse(json)
-  end
+  memo['body'] = array.join
 end
