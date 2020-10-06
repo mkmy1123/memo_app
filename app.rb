@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'sinatra'
 require 'sinatra/reloader'
 require 'pg'
@@ -13,7 +14,7 @@ end
 
 # ---- ROUTING -----
 get '/' do
-  @memos = get_all_memo
+  @memos = to_array_all_memo
   erb :root
 end
 
@@ -28,7 +29,7 @@ end
 
 get '/memo/:id' do
   @memo = get_memo(params[:id])
-  get_html_body(@memo)
+  to_html_body(@memo)
   erb :show
 end
 
@@ -47,9 +48,9 @@ delete '/memo/:id/delete' do
   redirect '/'
 end
 
-# ---- ACTIONS ---- 
+# ---- ACTIONS ----
 def create(title, body)
-  sql =<<~SQL
+  sql = <<~SQL
     INSERT INTO memo(id, title, body, updated_at, created_at)
     VALUES(DEFAULT, $1, $2, now(), now())
   SQL
@@ -57,7 +58,7 @@ def create(title, body)
 end
 
 def update(id, title, body)
-  sql =<<~SQL
+  sql = <<~SQL
     UPDATE memo
     SET title = $1,
         body = $2,
@@ -68,12 +69,12 @@ def update(id, title, body)
 end
 
 def delete(id)
-  settings.db_connect.exec( "DELETE FROM memo WHERE id = #{id}" )
+  settings.db_connect.exec("DELETE FROM memo WHERE id = #{id}")
 end
 
 # ---- GET DATA'S METHOD -----
-def get_all_memo
-  settings.db_connect.exec( "SELECT * FROM memo" )
+def to_array_all_memo
+  settings.db_connect.exec('SELECT * FROM memo')
 end
 
 def get_memo(id)
@@ -84,7 +85,7 @@ def get_memo(id)
 end
 
 # ---- ARRANGE DATA ----
-def get_html_body(memo)
+def to_html_body(memo)
   array = memo['body'].lines.map do |line|
     if line == "\r\n"
       '<br>'
