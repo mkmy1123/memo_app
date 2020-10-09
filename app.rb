@@ -2,13 +2,19 @@
 
 require 'sinatra'
 require 'sinatra/reloader'
-require 'json'
+require 'pg'
+require 'date'
 
-FILE_PATH = 'memo/data.json'
+# --- DB CONFIG ---
+configure do
+  set :db_connect, PG.connect(
+    user: 'postgres', dbname: 'memo_db'
+  )
+end
 
-# root page
+# ---- ROUTING -----
 get '/' do
-  @memos = all_memo
+  @memos = find_all_memos
   erb :root
 end
 
@@ -22,84 +28,68 @@ post '/memo' do
 end
 
 get '/memo/:id' do
-  get_memo(params[:id])
-  @memo['body'] = get_html_body(@memo)
+  @memo = find_memo(params[:id])
+  to_html_body(@memo)
+  p @memo
   erb :show
 end
 
 get '/memo/:id/edit' do
-  get_memo(params[:id])
+  @memo = find_memo(params[:id])
   erb :edit
 end
 
 patch '/memo/:id/edit' do
-  memos = all_memo
-  update(memos, params[:id])
+  update(params[:id], params[:title], params[:body])
   redirect "/memo/#{params[:id]}"
 end
 
 delete '/memo/:id/delete' do
-  memos = all_memo
-  delete(memos, params[:id])
+  delete(params[:id])
   redirect '/'
 end
 
-def is_equal_id(memo, id)
-  memo['id'] == id.to_i
-end
-
-def get_memo(id)
-  all_memo.each do |memo|
-    @memo = memo if is_equal_id(memo, id)
-  end
-end
-
-def get_html_body(memo)
-  array = memo['body'].lines.map do |line|
-    if line == "\r\n"
-      '<br>'
-    else
-      "<p>#{line}</p>"
-    end
-  end
-  array.join
-end
-
-def to_json_style(id, title, body)
-  <<~JSON
-    { "id": #{id}, "title": "#{title}", "body": #{body} }
-  JSON
-end
-
+# ---- ACTIONS ----
 def create(title, body)
-  File.open(FILE_PATH, 'a', 0o755) do |file|
-    id = all_memo.none? ? 1 : all_memo.last['id'] + 1
-    json = to_json_style(id, title, body.dump)
-    file.puts json
-  end
+  sql = <<~SQL
+    INSERT INTO memo(id, title, body, updated_at, created_at)
+    VALUES(DEFAULT, $1, $2, now(), now())
+  SQL
+  settings.db_connect.exec(sql, [title, body])
 end
 
-def update(memos, id)
-  File.open(FILE_PATH, 'w', 0o755) do |file|
-    memos.each do |memo|
-      json = is_equal_id(memo, id) ? to_json_style(id, params[:title], params[:body].dump) : memo.to_json
-      file.puts json
-    end
-  end
+def update(id, title, body)
+  sql = <<~SQL
+    UPDATE memo
+    SET title = $1,
+        body = $2,
+        updated_at = now()
+    WHERE id = #{id}
+  SQL
+  settings.db_connect.exec(sql, [title, body])
 end
 
-def delete(memos, id)
-  memos = memos.delete_if { |memo| is_equal_id(memo, id) }
-  File.open(FILE_PATH, 'w', 0o755) do |file|
-    memos.map! do |memo|
-      json = memo.to_json
-      file.puts json
-    end
-  end
+def delete(id)
+  settings.db_connect.exec("DELETE FROM memo WHERE id = #{id}")
 end
 
-def all_memo
-  File.readlines(FILE_PATH).map do |json|
-    JSON.parse(json)
+# ---- GET DATA'S METHOD -----
+def find_all_memos
+  settings.db_connect.exec('SELECT * FROM memo')
+end
+
+def find_memo(id)
+  sql = <<~SQL
+    SELECT * FROM memo WHERE id = #{id}
+  SQL
+  settings.db_connect.exec(sql).first
+end
+
+# ---- ARRANGE DATA ----
+def to_html_body(memo)
+  array = memo['body'].lines.map do |line|
+    line.gsub!("\r\n", '<br>')
+    line.gsub(' ', '&nbsp;')
   end
+  memo['body'] = '<p>' + array.join + '</p>'
 end
